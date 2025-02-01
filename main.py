@@ -6,6 +6,7 @@ from environs import Env
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import (
     CommandHandler,
+    ConversationHandler,
     Filters,
     MessageHandler,
     Updater,
@@ -15,25 +16,57 @@ from tools import parse_text
 
 
 def start(update: Update, context):
+    chat_id_str = str(update.effective_chat.id)
     reply_keyboard = [["Новый вопрос", "Сдаться"], ["Мой счёт"]]
     update.message.reply_text(
-        "Здравствуйте!",
+        "Приветствуем на нашей викторине! Для начала нажми [Новый вопрос]",
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard,
             resize_keyboard=True,
             is_persistent=True,
         ),
     )
+    db_connection.set(chat_id_str, "")
 
 
-def echo(update: Update, context):
-    text = update.message.text
-    if text == "Новый вопрос":
-        user_id = str(update.effective_chat.id)
-        question = random.choice(list(qa_set.keys()))
-        db_connection.set(user_id, question)
-        db_question = str(db_connection.get(user_id))
-        update.message.reply_text(db_question)
+def handle_new_question_request(update: Update, context):
+    chat_id_str = str(update.effective_chat.id)
+    question = random.choice(list(qa_set.keys()))
+    db_connection.set(chat_id_str, question)
+    update.message.reply_text(question)
+
+    return "SOLUTION_ATTEMPT"
+
+
+def handle_solution_attempt(update: Update, context):
+    text = update.message.text.replace("\n", " ").strip().lower()
+    chat_id_str = str(update.effective_chat.id)
+    question = db_connection.get(chat_id_str)
+
+    answer = qa_set[question].lower()
+    short_answer = answer.split(".")[0].split("(")[0].strip().lower()
+
+    if text == short_answer or text == answer:
+        update.message.reply_text(
+            "Правильно! Поздравляю! Для следующего вопроса нажми [Новый вопрос]"
+        )
+        db_connection.set(chat_id_str, "")
+
+        return ConversationHandler.END
+    else:
+        update.message.reply_text("Неправильно… Попробуешь ещё раз?")
+
+
+def handle_giveup_request(update: Update, context):
+    chat_id_str = str(update.effective_chat.id)
+    question = db_connection.get(chat_id_str)
+    answer = qa_set[question]
+    update.message.reply_text(
+        f"Правильный ответ: {answer}"
+    )
+    db_connection.set(chat_id_str, "")
+
+    handle_new_question_request(update, context)
 
 
 if __name__ == "__main__":
@@ -60,10 +93,30 @@ if __name__ == "__main__":
 
     updater = Updater(tg_bot_token)
     dispatcher = updater.dispatcher
-    dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(
-        MessageHandler(Filters.text & ~Filters.command, echo)
+        ConversationHandler(
+            entry_points=[
+                MessageHandler(
+                    Filters.regex(r"^Новый вопрос$"),
+                    handle_new_question_request,
+                )
+            ],
+            states={
+                "SOLUTION_ATTEMPT": [
+                    MessageHandler(
+                        Filters.regex(r"^Сдаться$"),
+                        handle_giveup_request,
+                    ),
+                    MessageHandler(
+                        Filters.text,
+                        handle_solution_attempt,
+                    )
+                ],
+            },
+            fallbacks=[],
+        )
     )
+    dispatcher.add_handler(CommandHandler("start", start))
 
     updater.start_polling()
     updater.idle()
