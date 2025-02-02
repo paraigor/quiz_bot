@@ -119,7 +119,7 @@ if __name__ == "__main__":
         decode_responses=True,
     )
 
-    question_file = Path("questions/1vs1200.txt")
+    question_file = Path("questions/base.txt")
     qa_set = parse_text(question_file)
 
     updater = Updater(tg_bot_token)
