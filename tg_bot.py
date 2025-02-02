@@ -43,8 +43,10 @@ def handle_solution_attempt(update: Update, context):
     chat_id_str = str(update.effective_chat.id)
     question = db_connection.get(chat_id_str)
 
-    answer = qa_set[question].lower()
-    short_answer = answer.split(".")[0].split("(")[0].strip().lower()
+    answer = qa_set.get(question)
+    if answer:
+        answer = answer.lower()
+        short_answer = answer.split(".")[0].split("(")[0].strip().lower()
 
     if text == short_answer or text == answer:
         update.message.reply_text(
@@ -60,7 +62,7 @@ def handle_solution_attempt(update: Update, context):
 def handle_giveup_request(update: Update, context):
     chat_id_str = str(update.effective_chat.id)
     question = db_connection.get(chat_id_str)
-    answer = qa_set[question]
+    answer = qa_set.get(question)
     update.message.reply_text(
         f"Правильный ответ: {answer}"
     )
