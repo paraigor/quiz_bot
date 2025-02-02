@@ -37,13 +37,13 @@ TG_CHAT_ID="98765432"
 REDIS_DB_HOST="[server].redis-cloud.com"
 
 # Порт сервера Redis
-REDIS_DB_PORT=18639
+REDIS_DB_PORT=18640
 
 # Пользователь БД Redis
 REDIS_DB_USERNAME="default"
 
 # Пароль пользователя БД Redis
-REDIS_DB_PASSWORD="wrGwtNsjxsMkjyGfNbu98iByg5RPqmXr"
+REDIS_DB_PASSWORD="xxxxxxxxx"
 
 # Токен сообщества VK
 VK_GROUP_TOKEN="vk1.a.LP_x0xXXxXXxX0xXxxXxxx0_xx0..."
@@ -67,11 +67,11 @@ $ py vk_bot.py
 
 Пример работы Телеграм бота:
 
-![tg_bot]()
+![tg_bot](https://github.com/user-attachments/assets/326610f4-b0ea-4e0b-b50e-7bc9a38cb276)
 
 Пример работы VK бота:
 
-![vk_bot]()
+![vk_bot](https://github.com/user-attachments/assets/5f60d26a-3f74-4783-971f-37927ba45723)
 
 ### Цель проекта
 
