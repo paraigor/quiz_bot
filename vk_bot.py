@@ -18,6 +18,7 @@ logger = logging.getLogger(__file__)
 
 def start(event, vk_api):
     user_id = event.user_id
+    db_user_id = "vk-" + user_id
     keyboard = VkKeyboard()
     keyboard.add_button("Новый вопрос", color=VkKeyboardColor.PRIMARY)
     keyboard.add_button("Сдаться", color=VkKeyboardColor.NEGATIVE)
@@ -34,13 +35,14 @@ def start(event, vk_api):
     except Exception as err:
         logger.info("Бот VK упал с ошибкой:")
         logger.error(err)
-    db_connection.set(user_id, "")
+    db_connection.set(db_user_id, "")
 
 
 def handle_new_question_request(event, vk_api):
     user_id = event.user_id
+    db_user_id = "vk-" + user_id
     question = random.choice(list(qa_set.keys()))
-    db_connection.set(user_id, question)
+    db_connection.set(db_user_id, question)
 
     try:
         vk_api.messages.send(
@@ -56,7 +58,8 @@ def handle_new_question_request(event, vk_api):
 def handle_solution_attempt(event, vk_api):
     message = event.text.replace("\n", " ").strip().lower()
     user_id = event.user_id
-    question = db_connection.get(user_id)
+    db_user_id = "vk-" + user_id
+    question = db_connection.get(db_user_id)
 
     answer = qa_set.get(question)
     if answer:
@@ -73,7 +76,7 @@ def handle_solution_attempt(event, vk_api):
         except Exception as err:
             logger.info("Бот VK упал с ошибкой:")
             logger.error(err)
-        db_connection.set(user_id, "")
+        db_connection.set(db_user_id, "")
     else:
         try:
             vk_api.messages.send(
@@ -88,7 +91,8 @@ def handle_solution_attempt(event, vk_api):
 
 def handle_giveup_request(event, vk_api):
     user_id = event.user_id
-    question = db_connection.get(user_id)
+    db_user_id = "vk-" + user_id
+    question = db_connection.get(db_user_id)
     answer = qa_set.get(question)
     try:
         vk_api.messages.send(
@@ -99,7 +103,7 @@ def handle_giveup_request(event, vk_api):
     except Exception as err:
         logger.info("Бот VK упал с ошибкой:")
         logger.error(err)
-    db_connection.set(user_id, "")
+    db_connection.set(db_user_id, "")
 
 
 if __name__ == "__main__":
