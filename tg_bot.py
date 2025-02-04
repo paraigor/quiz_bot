@@ -20,8 +20,7 @@ logger = logging.getLogger(__file__)
 
 
 def start(update: Update, context):
-    chat_id_str = str(update.effective_chat.id)
-    db_chat_id = "tg-" + chat_id_str
+    chat_id = "tg-" + str(update.effective_chat.id)
     reply_keyboard = [["Новый вопрос", "Сдаться"], ["Мой счёт"]]
 
     try:
@@ -37,14 +36,13 @@ def start(update: Update, context):
         logger.info("Бот Телаграм упал с ошибкой:")
         logger.error(err)
 
-    db_connection.set(db_chat_id, "")
+    db_connection.set(chat_id, "")
 
 
 def handle_new_question_request(update: Update, context):
-    chat_id_str = str(update.effective_chat.id)
-    db_chat_id = "tg-" + chat_id_str
+    chat_id = "tg-" + str(update.effective_chat.id)
     question = random.choice(list(qa_set.keys()))
-    db_connection.set(db_chat_id, question)
+    db_connection.set(chat_id, question)
     try:
         update.message.reply_text(question)
     except Exception as err:
@@ -56,9 +54,8 @@ def handle_new_question_request(update: Update, context):
 
 def handle_solution_attempt(update: Update, context):
     message = update.message.text.replace("\n", " ").strip().lower()
-    chat_id_str = str(update.effective_chat.id)
-    db_chat_id = "tg-" + chat_id_str
-    question = db_connection.get(db_chat_id)
+    chat_id = "tg-" + str(update.effective_chat.id)
+    question = db_connection.get(chat_id)
 
     answer = qa_set.get(question)
     if answer:
@@ -73,7 +70,7 @@ def handle_solution_attempt(update: Update, context):
         except Exception as err:
             logger.info("Бот Телаграм упал с ошибкой:")
             logger.error(err)
-        db_connection.set(db_chat_id, "")
+        db_connection.set(chat_id, "")
 
         return ConversationHandler.END
     else:
@@ -85,16 +82,15 @@ def handle_solution_attempt(update: Update, context):
 
 
 def handle_giveup_request(update: Update, context):
-    chat_id_str = str(update.effective_chat.id)
-    db_chat_id = "tg-" + chat_id_str
-    question = db_connection.get(db_chat_id)
+    chat_id = "tg-" + str(update.effective_chat.id)
+    question = db_connection.get(chat_id)
     answer = qa_set.get(question)
     try:
         update.message.reply_text(f"Правильный ответ: {answer}")
     except Exception as err:
         logger.info("Бот Телаграм упал с ошибкой:")
         logger.error(err)
-    db_connection.set(db_chat_id, "")
+    db_connection.set(chat_id, "")
 
     handle_new_question_request(update, context)
 
