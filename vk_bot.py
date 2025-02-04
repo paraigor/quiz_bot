@@ -143,12 +143,23 @@ if __name__ == "__main__":
         logger.error(err)
 
     for event in longpoll.listen():
+        if (
+            event.type == VkEventType.MESSAGE_NEW
+            and event.to_me
+            and event.text == "Начать"
+        ):
+            start(event, vk_api)
+        if (
+            event.type == VkEventType.MESSAGE_NEW
+            and event.to_me
+            and event.text == "Новый вопрос"
+        ):
+            handle_new_question_request(event, vk_api)
+        if (
+            event.type == VkEventType.MESSAGE_NEW
+            and event.to_me
+            and event.text == "Сдаться"
+        ):
+            handle_giveup_request(event, vk_api)
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-            if event.text == "Начать":
-                start(event, vk_api)
-            elif event.text == "Новый вопрос":
-                handle_new_question_request(event, vk_api)
-            elif event.text == "Сдаться":
-                handle_giveup_request(event, vk_api)
-            else:
-                handle_solution_attempt(event, vk_api)
+            handle_solution_attempt(event, vk_api)
