@@ -1,8 +1,6 @@
 import logging
 import random
-from pathlib import Path
 
-import redis
 from environs import Env
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import (
@@ -14,12 +12,13 @@ from telegram.ext import (
 )
 
 from log_handler import TgLogHandler
-from tools import parse_text
+from tools import fill_db_with_questions
 
 logger = logging.getLogger(__file__)
 
 
 def start(update: Update, context):
+    db = context.bot_data["db"]
     chat_id = "tg-" + str(update.effective_chat.id)
     reply_keyboard = [["Новый вопрос", "Сдаться"], ["Мой счёт"]]
 
@@ -36,13 +35,16 @@ def start(update: Update, context):
         logger.info("Бот Телаграм упал с ошибкой:")
         logger.error(err)
 
-    db_connection.set(chat_id, "")
+    db.set(chat_id, "")
 
 
 def handle_new_question_request(update: Update, context):
+    db = context.bot_data["db"]
     chat_id = "tg-" + str(update.effective_chat.id)
-    question = random.choice(list(qa_set.keys()))
-    db_connection.set(chat_id, question)
+    questions_total = int(db.get("questions_total"))
+    question_number = f"{random.randint(1, questions_total):03}"
+    question = db.hget(f"question:{question_number}", "question")
+    db.set(chat_id, question_number)
     try:
         update.message.reply_text(question)
     except Exception as err:
@@ -53,24 +55,24 @@ def handle_new_question_request(update: Update, context):
 
 
 def handle_solution_attempt(update: Update, context):
+    db = context.bot_data["db"]
     message = update.message.text.replace("\n", " ").strip().lower()
     chat_id = "tg-" + str(update.effective_chat.id)
-    question = db_connection.get(chat_id)
-
-    answer = qa_set.get(question)
+    question_number = db.get(chat_id)
+    answer = db.hget(f"question:{question_number}", "answer")
     if answer:
         answer = answer.lower()
         short_answer = answer.split(".")[0].split("(")[0].strip().lower()
 
     if message == short_answer or message == answer:
         try:
+            db.set(chat_id, "")
             update.message.reply_text(
                 "Правильно! Поздравляю!\nДля следующего вопроса нажми [Новый вопрос]"
             )
         except Exception as err:
             logger.info("Бот Телаграм упал с ошибкой:")
             logger.error(err)
-        db_connection.set(chat_id, "")
 
         return ConversationHandler.END
     else:
@@ -82,20 +84,21 @@ def handle_solution_attempt(update: Update, context):
 
 
 def handle_giveup_request(update: Update, context):
+    db = context.bot_data["db"]
     chat_id = "tg-" + str(update.effective_chat.id)
-    question = db_connection.get(chat_id)
-    answer = qa_set.get(question)
+    question_number = db.get(chat_id)
+    answer = db.hget(f"question:{question_number}", "answer")
     try:
         update.message.reply_text(f"Правильный ответ: {answer}")
     except Exception as err:
         logger.info("Бот Телаграм упал с ошибкой:")
         logger.error(err)
-    db_connection.set(chat_id, "")
+    db.set(chat_id, "")
 
     handle_new_question_request(update, context)
 
 
-if __name__ == "__main__":
+def main():
     logging.basicConfig(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         level=logging.INFO,
@@ -106,24 +109,10 @@ if __name__ == "__main__":
 
     tg_bot_token = env.str("TG_BOT_TOKEN")
     admin_chat_id = env("TG_CHAT_ID")
-    db_host = env.str("REDIS_DB_HOST")
-    db_port = env.int("REDIS_DB_PORT")
-    db_user = env.str("REDIS_DB_USERNAME", "default")
-    db_pass = env.str("REDIS_DB_PASSWORD")
-
-    db_connection = redis.Redis(
-        host=db_host,
-        port=db_port,
-        username=db_user,
-        password=db_pass,
-        decode_responses=True,
-    )
-
-    question_file = Path("questions/base.txt")
-    qa_set = parse_text(question_file)
 
     updater = Updater(tg_bot_token)
     dispatcher = updater.dispatcher
+    dispatcher.bot_data["db"] = fill_db_with_questions()
     dispatcher.add_handler(
         ConversationHandler(
             entry_points=[
@@ -154,3 +143,7 @@ if __name__ == "__main__":
 
     updater.start_polling()
     updater.idle()
+
+
+if __name__ == "__main__":
+    main()
