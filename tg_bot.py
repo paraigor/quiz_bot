@@ -12,7 +12,7 @@ from telegram.ext import (
 )
 
 from log_handler import TgLogHandler
-from tools import fill_db_with_questions
+from tools import connect_to_db, fill_db_with_questions
 
 logger = logging.getLogger(__file__)
 
@@ -110,9 +110,13 @@ def main():
     tg_bot_token = env.str("TG_BOT_TOKEN")
     admin_chat_id = env("TG_CHAT_ID")
 
+    db_connection = connect_to_db()
+    if not db_connection.get("questions_total"):
+        fill_db_with_questions()
+
     updater = Updater(tg_bot_token)
     dispatcher = updater.dispatcher
-    dispatcher.bot_data["db"] = fill_db_with_questions()
+    dispatcher.bot_data["db"] = db_connection
     dispatcher.add_handler(
         ConversationHandler(
             entry_points=[

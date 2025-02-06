@@ -9,7 +9,7 @@ from vk_api.longpoll import VkEventType, VkLongPoll
 from vk_api.utils import get_random_id
 
 from log_handler import TgLogHandler
-from tools import fill_db_with_questions
+from tools import connect_to_db, fill_db_with_questions
 
 logger = logging.getLogger(__file__)
 
@@ -33,16 +33,16 @@ def start(event, vk_api):
     except Exception as err:
         logger.info("Бот VK упал с ошибкой:")
         logger.error(err)
-    db.set(db_user_id, "")
+    db_connection.set(db_user_id, "")
 
 
 def handle_new_question_request(event, vk_api):
     user_id = event.user_id
     db_user_id = f"vk-{str(user_id)}"
-    questions_total = int(db.get("questions_total"))
+    questions_total = int(db_connection.get("questions_total"))
     question_number = f"{random.randint(1, questions_total):03}"
-    question = db.hget(f"question:{question_number}", "question")
-    db.set(db_user_id, question_number)
+    question = db_connection.hget(f"question:{question_number}", "question")
+    db_connection.set(db_user_id, question_number)
 
     try:
         vk_api.messages.send(
@@ -59,15 +59,15 @@ def handle_solution_attempt(event, vk_api):
     message = event.text.replace("\n", " ").strip().lower()
     user_id = event.user_id
     db_user_id = f"vk-{str(user_id)}"
-    question_number = db.get(db_user_id)
-    answer = db.hget(f"question:{question_number}", "answer")
+    question_number = db_connection.get(db_user_id)
+    answer = db_connection.hget(f"question:{question_number}", "answer")
     if answer:
         answer = answer.lower()
         short_answer = answer.split(".")[0].split("(")[0].strip().lower()
 
     if message == short_answer or message == answer:
         try:
-            db.set(db_user_id, "")
+            db_connection.set(db_user_id, "")
             vk_api.messages.send(
                 user_id=user_id,
                 message="Правильно! Поздравляю!\nДля следующего вопроса нажми [Новый вопрос]",
@@ -91,8 +91,8 @@ def handle_solution_attempt(event, vk_api):
 def handle_giveup_request(event, vk_api):
     user_id = event.user_id
     db_user_id = f"vk-{str(user_id)}"
-    question_number = db.get(db_user_id)
-    answer = db.hget(f"question:{question_number}", "answer")
+    question_number = db_connection.get(db_user_id)
+    answer = db_connection.hget(f"question:{question_number}", "answer")
     try:
         vk_api.messages.send(
             user_id=user_id,
@@ -102,7 +102,7 @@ def handle_giveup_request(event, vk_api):
     except Exception as err:
         logger.info("Бот VK упал с ошибкой:")
         logger.error(err)
-    db.set(db_user_id, "")
+    db_connection.set(db_user_id, "")
 
 
 if __name__ == "__main__":
@@ -122,7 +122,9 @@ if __name__ == "__main__":
     logger.addHandler(TgLogHandler(bot, admin_chat_id))
     logger.info("Бот VK запущен")
 
-    db = fill_db_with_questions()
+    db_connection = connect_to_db()
+    if not db_connection.get("questions_total"):
+        fill_db_with_questions()
 
     try:
         vk_session = vk_api.VkApi(token=vk_token)

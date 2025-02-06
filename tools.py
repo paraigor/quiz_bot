@@ -4,8 +4,9 @@ import redis
 from environs import Env
 
 
-def parse_text(file):
-    with open(file, encoding="KOI8-R") as file:
+def get_qa_set():
+    question_file = Path("questions/base.txt")
+    with open(question_file, encoding="KOI8-R") as file:
         content = file.read().splitlines()
 
     content_length = len(content)
@@ -37,7 +38,7 @@ def parse_text(file):
     return qa_set
 
 
-def fill_db_with_questions():
+def connect_to_db():
     env = Env()
     env.read_env()
 
@@ -54,18 +55,20 @@ def fill_db_with_questions():
         decode_responses=True,
     )
 
-    if not db_connection.get("questions_total"):
-        question_file = Path("questions/base.txt")
-        qa_set = parse_text(question_file)
-        question_number = 1
-
-        for question, answer in qa_set.items():
-            db_connection.hset(f"question:{question_number:03}", mapping={
-                "question": question,
-                "answer": answer
-            })
-            question_number += 1
-
-        db_connection.set("questions_total", len(qa_set))
-
     return db_connection
+
+
+def fill_db_with_questions():
+    db = connect_to_db()
+
+    qa_set = get_qa_set()
+    question_number = 1
+
+    for question, answer in qa_set.items():
+        db.hset(f"question:{question_number:03}", mapping={
+            "question": question,
+            "answer": answer
+        })
+        question_number += 1
+
+    db.set("questions_total", len(qa_set))
