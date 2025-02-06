@@ -16,7 +16,7 @@ logger = logging.getLogger(__file__)
 
 def start(event, vk_api, db):
     user_id = event.user_id
-    db_user_id = "vk-" + str(user_id)
+    db_user_id = f"vk-{str(user_id)}"
     keyboard = VkKeyboard()
     keyboard.add_button("Новый вопрос", color=VkKeyboardColor.PRIMARY)
     keyboard.add_button("Сдаться", color=VkKeyboardColor.NEGATIVE)
@@ -38,7 +38,7 @@ def start(event, vk_api, db):
 
 def handle_new_question_request(event, vk_api, db):
     user_id = event.user_id
-    db_user_id = "vk-" + str(user_id)
+    db_user_id = f"vk-{str(user_id)}"
     questions_total = int(db.get("questions_total"))
     question_number = f"{random.randint(1, questions_total):03}"
     question = db.hget(f"question:{question_number}", "question")
@@ -58,7 +58,7 @@ def handle_new_question_request(event, vk_api, db):
 def handle_solution_attempt(event, vk_api, db):
     message = event.text.replace("\n", " ").strip().lower()
     user_id = event.user_id
-    db_user_id = "vk-" + str(user_id)
+    db_user_id = f"vk-{str(user_id)}"
     question_number = db.get(db_user_id)
     answer = db.hget(f"question:{question_number}", "answer")
     if answer:
@@ -90,7 +90,7 @@ def handle_solution_attempt(event, vk_api, db):
 
 def handle_giveup_request(event, vk_api, db):
     user_id = event.user_id
-    db_user_id = "vk-" + str(user_id)
+    db_user_id = f"vk-{str(user_id)}"
     question_number = db.get(db_user_id)
     answer = db.hget(f"question:{question_number}", "answer")
     try:

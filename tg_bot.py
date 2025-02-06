@@ -19,7 +19,7 @@ logger = logging.getLogger(__file__)
 
 def start(update: Update, context):
     db = context.bot_data["db"]
-    chat_id = "tg-" + str(update.effective_chat.id)
+    chat_id = f"tg-{str(update.effective_chat.id)}"
     reply_keyboard = [["Новый вопрос", "Сдаться"], ["Мой счёт"]]
 
     try:
@@ -40,7 +40,7 @@ def start(update: Update, context):
 
 def handle_new_question_request(update: Update, context):
     db = context.bot_data["db"]
-    chat_id = "tg-" + str(update.effective_chat.id)
+    chat_id = f"tg-{str(update.effective_chat.id)}"
     questions_total = int(db.get("questions_total"))
     question_number = f"{random.randint(1, questions_total):03}"
     question = db.hget(f"question:{question_number}", "question")
@@ -57,7 +57,7 @@ def handle_new_question_request(update: Update, context):
 def handle_solution_attempt(update: Update, context):
     db = context.bot_data["db"]
     message = update.message.text.replace("\n", " ").strip().lower()
-    chat_id = "tg-" + str(update.effective_chat.id)
+    chat_id = f"tg-{str(update.effective_chat.id)}"
     question_number = db.get(chat_id)
     answer = db.hget(f"question:{question_number}", "answer")
     if answer:
@@ -85,7 +85,7 @@ def handle_solution_attempt(update: Update, context):
 
 def handle_giveup_request(update: Update, context):
     db = context.bot_data["db"]
-    chat_id = "tg-" + str(update.effective_chat.id)
+    chat_id = f"tg-{str(update.effective_chat.id)}"
     question_number = db.get(chat_id)
     answer = db.hget(f"question:{question_number}", "answer")
     try:
