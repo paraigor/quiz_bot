@@ -14,7 +14,7 @@ from tools import fill_db_with_questions
 logger = logging.getLogger(__file__)
 
 
-def start(event, vk_api, db):
+def start(event, vk_api):
     user_id = event.user_id
     db_user_id = f"vk-{str(user_id)}"
     keyboard = VkKeyboard()
@@ -36,7 +36,7 @@ def start(event, vk_api, db):
     db.set(db_user_id, "")
 
 
-def handle_new_question_request(event, vk_api, db):
+def handle_new_question_request(event, vk_api):
     user_id = event.user_id
     db_user_id = f"vk-{str(user_id)}"
     questions_total = int(db.get("questions_total"))
@@ -55,7 +55,7 @@ def handle_new_question_request(event, vk_api, db):
         logger.error(err)
 
 
-def handle_solution_attempt(event, vk_api, db):
+def handle_solution_attempt(event, vk_api):
     message = event.text.replace("\n", " ").strip().lower()
     user_id = event.user_id
     db_user_id = f"vk-{str(user_id)}"
@@ -88,7 +88,7 @@ def handle_solution_attempt(event, vk_api, db):
             logger.error(err)
 
 
-def handle_giveup_request(event, vk_api, db):
+def handle_giveup_request(event, vk_api):
     user_id = event.user_id
     db_user_id = f"vk-{str(user_id)}"
     question_number = db.get(db_user_id)
@@ -105,12 +105,16 @@ def handle_giveup_request(event, vk_api, db):
     db.set(db_user_id, "")
 
 
-def main():
+if __name__ == "__main__":
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(message)s",
         level=logging.INFO,
     )
 
+    env = Env()
+    env.read_env()
+
+    vk_token = env.str("VK_GROUP_TOKEN")
     bot_token = env("TG_BOT_TOKEN")
     admin_chat_id = env("TG_CHAT_ID")
 
@@ -120,24 +124,6 @@ def main():
 
     db = fill_db_with_questions()
 
-    for event in longpoll.listen():
-        if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-            if event.text == "Начать":
-                start(event, vk_api, db)
-            elif event.text == "Новый вопрос":
-                handle_new_question_request(event, vk_api, db)
-            elif event.text == "Сдаться":
-                handle_giveup_request(event, vk_api, db)
-            else:
-                handle_solution_attempt(event, vk_api, db)
-
-
-if __name__ == "__main__":
-    env = Env()
-    env.read_env()
-
-    vk_token = env.str("VK_GROUP_TOKEN")
-
     try:
         vk_session = vk_api.VkApi(token=vk_token)
         vk_api = vk_session.get_api()
@@ -146,4 +132,13 @@ if __name__ == "__main__":
         logger.info("Бот VK упал с ошибкой:")
         logger.error(err)
 
-    main()
+    for event in longpoll.listen():
+        if event.type == VkEventType.MESSAGE_NEW and event.to_me:
+            if event.text == "Начать":
+                start(event, vk_api)
+            elif event.text == "Новый вопрос":
+                handle_new_question_request(event, vk_api)
+            elif event.text == "Сдаться":
+                handle_giveup_request(event, vk_api)
+            else:
+                handle_solution_attempt(event, vk_api)
